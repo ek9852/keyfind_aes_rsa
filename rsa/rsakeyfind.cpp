@@ -4,12 +4,14 @@
 #include <fcntl.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdint.h>
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/mman.h>
 #include <string>
 #include <iostream>
+#include <unistd.h>
 
 #ifdef __FreeBSD__
 #include <err.h>
@@ -84,8 +86,8 @@ bool PrintFields(unsigned char* start, string* fields, string &output) {
 // Returns a pointer to the beginning of a BER-encoded key by working
 // backwards from the given memory map offset, looking for the
 // sequence identifier (this is not completely safe)
-unsigned char *FindKeyStart(unsigned char *map, int offset) {
-  for (int k = offset; k >= 0 && k > offset-20; k--)
+unsigned char *FindKeyStart(unsigned char *map, int64_t offset) {
+  for (int64_t k = offset; k >= 0 && k > offset-20; k--)
     if (map[k] == 0x30)
       return &map[k];
   return NULL;
@@ -93,8 +95,8 @@ unsigned char *FindKeyStart(unsigned char *map, int offset) {
 
 // Finds and prints private (or private and public) keys in the memory
 // map by searching for given target pattern
-void FindKeys(unsigned char *image, int isize, unsigned char *target, int target_size, bool find_public) {
-  for (int i = 0; i < isize - target_size; i++) {
+void FindKeys(unsigned char *image, int64_t isize, unsigned char *target, int target_size, bool find_public) {
+  for (int64_t i = 0; i < isize - target_size; i++) {
     if (memcmp(&image[i], target, target_size))
       continue;   
 
@@ -116,7 +118,7 @@ void FindKeys(unsigned char *image, int isize, unsigned char *target, int target
 
 // Memory maps filename and return a pointer on success, setting len
 // to the length of the file (does not return on error)
-unsigned char *MapFile(char *filename, unsigned int &len) {
+unsigned char *MapFile(char *filename, int64_t &len) {
   int fd = open(filename, O_RDONLY);
   if (fd < 0)
     err(1, "image open failed");
@@ -187,7 +189,7 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
 
-  unsigned int ilen;
+  int64_t ilen;
   unsigned char *image = MapFile(argv[1], ilen); 
   if (argc == 3) {
     // method 1: searching for modulus
